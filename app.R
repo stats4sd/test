@@ -23,7 +23,7 @@ kobohr_getdata_csv<-function(url,u,pw){
     d_content <- read_csv(content(rawdata,"raw",encoding = "UTF-8"), na = "n/a")
 }
 
-url_midline <-"https://kc.humanitarianresponse.info/api/v1/data/691626.csv"
+url_endline <-"https://kc.humanitarianresponse.info/api/v1/data/870395.csv"
 url_backcheck <-"https://kc.humanitarianresponse.info/api/v1/data/701627.csv"
 
 
@@ -40,12 +40,12 @@ backcheck_var <- c("Telephone_Number",
 backcheck_keep <- paste0(backcheck_keep,".s")
 backcheck_var <- paste0(backcheck_var,".s")
 
-midline_keep <- c("index", "survey_agency", "State",
+endline_keep <- c("index", "survey_agency", "State",
                   "District", "username", "phonenumber_enumerator", "deviceid",
                   "gps_location", "_gps_location_latitude", "_gps_location_longitude",
                   "_gps_location_altitude", "_gps_location_precision", "Respondent_name", "date","start", "CompletionDateTime", "interviewDuration",
-                  "interviewDuringDay", "interviewDuration","veryshort", "short", "reasonableDuration", "nbDontknow",  "DisplacementStatus_Full")
-midline_var <- c( "PhoneNumber",
+                  "interviewDuringDay", "interviewDuration","veryshort", "short", "reasonableDuration", "nbDontknow",  "DisplacementStatus_Full_EL")
+endline_var <- c( "PhoneNumber",
                   "QuHeadOfHH", 
                   "MovePlan", "MealsEatPerDay",
                   "ShelterType", "ElectricityAccess", "hh_size", 
@@ -53,11 +53,11 @@ midline_var <- c( "PhoneNumber",
                   "SelfReliance", 
                   "MainIncomeSource", "LandOwnership",
                   "csi_score")
-midline_keep <- paste0(midline_keep,".m")
-midline_var <- paste0(midline_var,".m")
-varshown <- c("percentMatch", "index.m", "survey_agency.m","username.m",  "phonenumber_enumerator.m", "deviceid.m", "date.m", "start.m", "CompletionDateTime.m","interviewDuration.m", "nbDontknow.m",
-              "State.m","District.m", "DisplacementStatus_Full.m","displacement_status.s", c(rbind(midline_var, backcheck_var)))
-allvars <- c("percentMatch",midline_keep, midline_var, backcheck_keep, backcheck_var)
+endline_keep <- paste0(endline_keep,".e")
+endline_var <- paste0(endline_var,".e")
+varshown <- c("percentMatch", "index.e", "survey_agency.e","username.e",  "phonenumber_enumerator.e", "deviceid.e", "date.e", "start.e", "CompletionDateTime.e","interviewDuration.e", "nbDontknow.e",
+              "State.e","District.e", "DisplacementStatus_Full_EL.e","displacement_status.s", c(rbind(endline_var, backcheck_var)))
+allvars <- c("percentMatch",endline_keep, endline_var, backcheck_keep, backcheck_var)
 
 listData <- function(){
     d <- data.frame(matrix(ncol=length(varshown), nrow = 0))
@@ -66,34 +66,34 @@ listData <- function(){
 }
 
 
-prepareData <- function(midline, backcheck){
+prepareData <- function(endline, backcheck){
     
     backcheck$csi_score <- as.numeric(backcheck$csiLess)+ as.numeric(backcheck$csiBorrow)+ as.numeric(backcheck$csiReduce)+ as.numeric(backcheck$csiAdult)+ as.numeric(backcheck$csiFewer)
-    midline$csi_score <- as.numeric(midline$csiLess)+ as.numeric(midline$csiBorrow)+ as.numeric(midline$csiReduce)+ as.numeric(midline$csiAdult)+ as.numeric(midline$csiFewer)
-    midline$interviewDuration <- difftime(midline$CompletionDateTime, midline$start, units='mins')
-    midline$interviewDuringDay <- between(format(midline$start, format="%H%M%S"),40000, 160000)
-    midline$reasonableDuration <- between(midline$interviewDuration, 30, 90)
-    midline$short <- between(midline$interviewDuration, 25, 30)
-    midline$veryshort <- midline$interviewDuration<25
-    midline$nbDontknow <- apply(midline,1,function(x) sum(x=="dontknow", na.rm=T))
-    midline$date <- format(midline$start, "%m-%d")
+    endline$csi_score <- as.numeric(endline$csiLess)+ as.numeric(endline$csiBorrow)+ as.numeric(endline$csiReduce)+ as.numeric(endline$csiAdult)+ as.numeric(endline$csiFewer)
+    endline$interviewDuration <- difftime(endline$CompletionDateTime, endline$start, units='mins')
+    endline$interviewDuringDay <- between(format(endline$start, format="%H%M%S"),40000, 160000)
+    endline$reasonableDuration <- between(endline$interviewDuration, 30, 90)
+    endline$short <- between(endline$interviewDuration, 25, 30)
+    endline$veryshort <- endline$interviewDuration<25
+    endline$nbDontknow <- apply(endline,1,function(x) sum(x=="dontknow"|x==-88, na.rm=T))
+    endline$date <- format(endline$start, "%m-%d")
     
     
-    colnames(midline) <- paste0(colnames(midline),".m")
+    colnames(endline) <- paste0(colnames(endline),".e")
     colnames(backcheck) <- paste0(colnames(backcheck),".s")
     
-    data_check <- left_join(midline[,c(midline_keep,midline_var)], backcheck[,c(backcheck_keep,backcheck_var)], by=c("index.m"="index.s"), keep=TRUE)
+    data_check <- left_join(endline[,c(endline_keep,endline_var)], backcheck[,c(backcheck_keep,backcheck_var)], by=c("index.e"="index.s"), keep=TRUE)
     
     data_check$qualScore <-0
     
     for(i in 1:length(backcheck_var)){
-        isItDifferent <- ifelse(data_check[,backcheck_var[i]]!=data_check[,midline_var[i]], 1, 0)
+        isItDifferent <- ifelse(data_check[,backcheck_var[i]]!=data_check[,endline_var[i]], 1, 0)
         if(backcheck_var[i] %in% c("age_years.s", "HH_size.s")){
-            isItDifferent <- (abs(data_check[,backcheck_var[i]]-data_check[,midline_var[i]])) > 1
+            isItDifferent <- (abs(data_check[,backcheck_var[i]]-data_check[,endline_var[i]])) > 1
         }else if(backcheck_var[i]=="csi_score.s"){
-            isItDifferent <- (abs(data_check[,backcheck_var[i]]-data_check[,midline_var[i]])) > 3
+            isItDifferent <- (abs(data_check[,backcheck_var[i]]-data_check[,endline_var[i]])) > 3
         }else if(backcheck_var[i]=="Telephone_Number.s"){
-            isItDifferent <- (str_sub(data_check[,backcheck_var[i]], start= -8)!=str_sub(data_check[,midline_var[i]], start=-8))
+            isItDifferent <- (str_sub(data_check[,backcheck_var[i]], start= -8)!=str_sub(data_check[,endline_var[i]], start=-8))
         }
         data_check$qualScore <- data_check$qualScore + ifelse(is.na(isItDifferent), .5, isItDifferent)
     }
@@ -107,17 +107,17 @@ prepareData <- function(midline, backcheck){
 
 
 get_data <- function(login, password){
-    d_midline <- tryCatch(kobohr_getdata_csv(url_midline,login,password), error=function(e){message("can't access data")})
+    d_endline <- tryCatch(kobohr_getdata_csv(url_endline,login,password), error=function(e){message("can't access data")})
     d_backcheck <- tryCatch(kobohr_getdata_csv(url_backcheck,login,password), error=function(e){message("can't access data")})
-    if(length(d_midline)>1 & length(d_midline)>1){
-        midline <- as.data.frame(d_midline)
-        colnames(midline) <-gsub(".*/","",colnames(midline))
-        midline$survey_agency[is.na(midline$survey_agency)] <- "-"
-        midline$username[is.na(midline$username)] <- "-"
-        midline$District[is.na(midline$District)] <- "-"
+    if(length(d_endline)>1 & length(d_endline)>1){
+        endline <- as.data.frame(d_endline)
+        colnames(endline) <-gsub(".*/","",colnames(endline))
+        endline$survey_agency[is.na(endline$survey_agency)] <- "-"
+        endline$username[is.na(endline$username)] <- "-"
+        endline$District[is.na(endline$District)] <- "-"
         backcheck <- as.data.frame(d_backcheck)
         colnames(backcheck) <-gsub(".*/","",colnames(backcheck))
-        return(prepareData(midline, backcheck))
+        return(prepareData(endline, backcheck))
     }
 }
 
@@ -130,12 +130,12 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             actionButton("load_data", "Load data"),
-            #selectInput("summary_by", "Choose focus of quality summary table", c("survey_agency.m", "username.m"), multiple = TRUE),
-            pickerInput("summary_by", "Summary by (top table)", c("survey_agency.m", "District.m", "username.m", "date.m"), selected = c("survey_agency.m"), multiple = TRUE),
-            pickerInput("filter_date", "Filter date",sort(unique(listData()$date.m), na.last=TRUE),selected = unique(listData()$date.m),options = list(`actions-box` = TRUE), multiple = T),
-            pickerInput("filter_agency", "Filter agency partner",sort(unique(listData()$survey_agency.m), na.last=TRUE),selected = unique(listData()$survey_agency.m),options = list(`actions-box` = TRUE), multiple = T),
-            pickerInput("filter_district", "Filter district",sort(unique(listData()$District.m), na.last=TRUE),selected = unique(listData()$District.m),options = list(`actions-box` = TRUE), multiple = T),
-            pickerInput("filter_username", "Filter username",sort(unique(listData()$username.m), na.last=TRUE),selected=unique(listData()$username.m),options = list(`actions-box` = TRUE), multiple = T),
+            #selectInput("summary_by", "Choose focus of quality summary table", c("survey_agency.e", "username.e"), multiple = TRUE),
+            pickerInput("summary_by", "Summary by (top table)", c("survey_agency.e", "District.e", "username.e", "date.e"), selected = c("survey_agency.e"), multiple = TRUE),
+            pickerInput("filter_date", "Filter date",sort(unique(listData()$date.e), na.last=TRUE),selected = unique(listData()$date.e),options = list(`actions-box` = TRUE), multiple = T),
+            pickerInput("filter_agency", "Filter agency partner",sort(unique(listData()$survey_agency.e), na.last=TRUE),selected = unique(listData()$survey_agency.e),options = list(`actions-box` = TRUE), multiple = T),
+            pickerInput("filter_district", "Filter district",sort(unique(listData()$District.e), na.last=TRUE),selected = unique(listData()$District.e),options = list(`actions-box` = TRUE), multiple = T),
+            pickerInput("filter_username", "Filter username",sort(unique(listData()$username.e), na.last=TRUE),selected=unique(listData()$username.e),options = list(`actions-box` = TRUE), multiple = T),
             h5("For bottom table:"),
             sliderInput("dontknow_threshold",
                         "Show when nomber of dont know is greater than... ",
@@ -188,20 +188,20 @@ server <- function(input, output, session) {
     observeEvent(input$submit, {
         data$check <- get_data(isolate(input$login), isolate(input$password))
         removeModal()
-        updatePickerInput(session, "filter_agency", choices = sort(unique((data$check)$survey_agency.m), na.last=TRUE),selected = unique((data$check)$survey_agency.m))
-        updatePickerInput(session, "filter_date", choices = sort(unique((data$check)$date.m), na.last=TRUE),selected = unique((data$check)$date.m))
-        updatePickerInput(session, "filter_district", choices = sort(unique((data$check)$District.m), na.last=TRUE),selected = unique((data$check)$District.m))
+        updatePickerInput(session, "filter_agency", choices = sort(unique((data$check)$survey_agency.e), na.last=TRUE),selected = unique((data$check)$survey_agency.e))
+        updatePickerInput(session, "filter_date", choices = sort(unique((data$check)$date.e), na.last=TRUE),selected = unique((data$check)$date.e))
+        updatePickerInput(session, "filter_district", choices = sort(unique((data$check)$District.e), na.last=TRUE),selected = unique((data$check)$District.e))
     })
     
     
     # update list of usernames
     updatedChoices = reactive({
         filtered_data <- isolate(data$check) %>%
-            filter(survey_agency.m %in% input$filter_agency,
-                   District.m %in% input$filter_district,
-                   date.m %in% input$filter_date)
+            filter(survey_agency.e %in% input$filter_agency,
+                   District.e %in% input$filter_district,
+                   date.e %in% input$filter_date)
         enum_choices <- filtered_data %>%
-            pull(username.m) %>% unique() %>% sort(na.last=TRUE)
+            pull(username.e) %>% unique() %>% sort(na.last=TRUE)
         tmp<-list(enum_choices)
         return(tmp)
     })
@@ -221,20 +221,20 @@ server <- function(input, output, session) {
         #      footer = NULL
         #    ))
         isolate(data$check) %>%
-            filter(survey_agency.m%in%input$filter_agency,
-                   username.m %in% input$filter_username,
-                   date.m %in% input$filter_date,
-                   District.m%in% input$filter_district)%>%
+            filter(survey_agency.e%in%input$filter_agency,
+                   username.e %in% input$filter_username,
+                   date.e %in% input$filter_date,
+                   District.e%in% input$filter_district)%>%
             group_by_at(vars(input$summary_by))%>%
-            summarise(N=sum(!is.na(index.m), na.rm=T),
-                      time_ok=mean(interviewDuringDay.m, na.rm=TRUE),
-                      avg_duration = mean(interviewDuration.m, na.rm=TRUE),
-                      `<25min`=mean(veryshort.m, na.rm=TRUE),
-                      `25-30min`=mean(short.m, na.rm=TRUE),
-                      `30-90min` = mean(reasonableDuration.m, na.rm=TRUE),
-                      avg_dontknow = mean(nbDontknow.m),
+            summarise(N=sum(!is.na(index.e), na.rm=T),
+                      time_ok=mean(interviewDuringDay.e, na.rm=TRUE),
+                      avg_duration = mean(interviewDuration.e, na.rm=TRUE),
+                      `<25min`=mean(veryshort.e, na.rm=TRUE),
+                      `25-30min`=mean(short.e, na.rm=TRUE),
+                      `30-90min` = mean(reasonableDuration.e, na.rm=TRUE),
+                      avg_dontknow = mean(nbDontknow.e),
                       N_backchecked=sum(!is.na(index.s), na.rm=T),
-                      #prop_bc=sum(!is.na(index.s), na.rm=T)/sum(!is.na(index.m), na.rm=T),
+                      #prop_bc=sum(!is.na(index.s), na.rm=T)/sum(!is.na(index.e), na.rm=T),
                       avg_match_perc=mean(percentMatch, na.rm=T)/100,
                       min_match_perc=min(percentMatch, na.rm=T)/100,
                       #`25percMatch`=quantile(percentMatch, probs = .25, na.rm=T)/100
@@ -249,13 +249,13 @@ server <- function(input, output, session) {
             # Apply filter
             #filter(!is.na(index.s))%>%
             filter(percentMatch<=input$data_quality_threshold | input$data_quality_threshold==100)%>%
-            filter(nbDontknow.m>=input$dontknow_threshold)%>%
-            #filter(reasonableDuration.m<=input$duration_threshold | is.na(input$duration_threshold))%>%
+            filter(nbDontknow.e>=input$dontknow_threshold)%>%
+            #filter(reasonableDuration.e<=input$duration_threshold | is.na(input$duration_threshold))%>%
             
-            filter(username.m %in% input$filter_username,
-                   survey_agency.m%in%input$filter_agency,
-                   date.m %in% input$filter_date,
-                   District.m%in% input$filter_district)%>%
+            filter(username.e %in% input$filter_username,
+                   survey_agency.e%in%input$filter_agency,
+                   date.e %in% input$filter_date,
+                   District.e%in% input$filter_district)%>%
             .[,varshown]
     })
     
@@ -272,7 +272,7 @@ server <- function(input, output, session) {
     output$data <- renderDataTable({
         datatable(filteredRawData()) %>%
             formatRound(c("percentMatch"), 2)%>%
-            formatRound(c("interviewDuration.m"), 0)
+            formatRound(c("interviewDuration.e"), 0)
     })
     
     # make the download top table button
