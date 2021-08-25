@@ -29,7 +29,7 @@ url_backcheck <-"https://kc.humanitarianresponse.info/api/v1/data/871206.csv"
 
 
 backcheck_keep <- c("index", "survey_agency",
-                    "district_bl", "name_call_back","displacement_status")
+                    "district", "name_call_back","displacement_status")
 
 backcheck_var <- c("Telephone_Number",
                    "head_hh_yn", 
@@ -76,7 +76,7 @@ prepareData <- function(endline, backcheck){
     endline$reasonableDuration <- between(endline$interviewDuration, 30, 90)
     endline$short <- between(endline$interviewDuration, 25, 30)
     endline$veryshort <- endline$interviewDuration<25
-    endline$nbDontknow <- apply(endline,1,function(x) sum(x=="dontknow"|x==-88, na.rm=T))
+    endline$nbDontknow <- apply(endline,1,function(x) sum(x=="dontknow"|x==-88|x=="-88", na.rm=T))
     endline$date <- format(endline$start, "%m-%d")
     
     
@@ -160,7 +160,7 @@ ui <- fluidPage(
         mainPanel(
             dataTableOutput("summary_table"),
             br(),br(),
-            dataTableOutput("data")
+            div(style = 'overflow-x: scroll', dataTableOutput("data", width = "100%"))
         )
     )
 )
